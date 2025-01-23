@@ -473,11 +473,12 @@ class FlutterPlugin implements Plugin<Project> {
     //
     // The output file is parsed and used by devtool.
     private static void addTasksForOutputsAppLinkSettings(Project project) {
-        project.android.applicationVariants.all { variant ->
+        BaseAppModuleExtension android = project.extensions.findByType(BaseAppModuleExtension.class)
+        android.applicationVariants.configureEach { variant ->
             // Warning: The name of this task is used by AndroidBuilder.outputsAppLinkSettings
             project.tasks.register("output${variant.name.capitalize()}AppLinkSettings") {
                 description "stores app links settings for the given build variant of this Android project into a json file."
-                variant.outputs.all { output ->
+                variant.outputs.configureEach { output ->
                     // Deeplinks are defined in AndroidManifest.xml and is only available after
                     // `processResourcesProvider`.
                     Object processResources = output.hasProperty(propProcessResourcesProvider) ?
@@ -488,10 +489,10 @@ class FlutterPlugin implements Plugin<Project> {
                     AppLinkSettings appLinkSettings = new AppLinkSettings()
                     appLinkSettings.applicationId = variant.applicationId
                     appLinkSettings.deeplinks = [] as Set<Deeplink>
-                    variant.outputs.all { output ->
+                    variant.outputs.configureEach { output ->
                         Object processResources = output.hasProperty(propProcessResourcesProvider) ?
                                 output.processResourcesProvider.get() : output.processResources
-                        def manifest = new XmlParser().parse(processResources.manifestFile)
+                        Node manifest = new XmlParser().parse(processResources.manifestFile)
                         manifest.application.activity.each { activity ->
                             activity."meta-data".each { metadata ->
                                 boolean nameAttribute = metadata.attributes().find { it.key == 'android:name' }?.value == 'flutter_deeplinking_enabled'
@@ -1418,7 +1419,6 @@ class FlutterPlugin implements Plugin<Project> {
                 //   * `flavor-name` is the flavor used to build the app in lower case if the assemble task is called.
                 //   * `build-mode` can be `release|debug|profile`.
                 variant.outputs.each { output ->
-                    println("debug 2: ${output.getClass()}")
                     assembleTask.doLast {
                         PackageAndroidArtifact packageApplicationProvider = variant.packageApplicationProvider.get()
                         Directory outputDirectory = packageApplicationProvider.outputDirectory.get()
@@ -1460,7 +1460,6 @@ class FlutterPlugin implements Plugin<Project> {
         appProject.afterEvaluate {
             // AndroidComponentsExtension android = appProject.extensions.findByType(AndroidComponentsExtension.class)
             assert(appProject.android != null)
-            // println("debug 23: ${project.android}")
             project.android.libraryVariants.all { libraryVariant ->
                 Task copyFlutterAssetsTask
                 appProject.android.applicationVariants.all { appProjectVariant ->
